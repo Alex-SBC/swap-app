@@ -951,6 +951,19 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, [couple?.id, user?.role, loadSwaps]);
 
+  // Polling fallback every 5s for swaps + user XP
+  useEffect(() => {
+    if (!couple?.id) return;
+    const interval = setInterval(() => {
+      loadSwaps(couple.id);
+      const uid = localStorage.getItem("swap_user_id");
+      const partnerRole = user?.role === "a" ? "b" : "a";
+      if (uid) supabase.from("users").select("*").eq("id", uid).single().then(({ data }) => data && setUser(data));
+      supabase.from("users").select("*").eq("couple_id", couple.id).eq("role", partnerRole).single().then(({ data }) => data && setPartner(data));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [couple?.id, user?.role, loadSwaps]);
+
   // Also poll partner XP
   useEffect(() => {
     if (!couple?.id || !user) return;
