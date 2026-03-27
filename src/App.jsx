@@ -410,10 +410,13 @@ function Home({ user, partner, couple, swaps, setScreen, onRefresh }) {
             {user?.avatar} {user?.name} <span style={{ color: theme.textDim }}>×</span> {partner?.avatar || "?"} {partner?.name || "…"}
           </div>
         </div>
-        <Card style={{ padding: "8px 14px", textAlign: "center", cursor: "pointer" }} onClick={onRefresh}>
+        <button onClick={onRefresh} style={{
+          background: theme.surface, border: `1px solid ${theme.border}`,
+          borderRadius: 14, padding: "8px 14px", textAlign: "center", cursor: "pointer",
+        }}>
           <div style={{ fontSize: 16, fontFamily: fontDisp, color: theme.purple, fontWeight: 800 }}>LVL {level}</div>
           <div style={{ fontSize: 9, fontFamily: font, color: theme.textDim, letterSpacing: 0.5 }}>TAP TO SYNC</div>
-        </Card>
+        </button>
       </div>
 
       {/* XP */}
