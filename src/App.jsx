@@ -228,7 +228,23 @@ function Onboarding({ onDone }) {
       const id = inputId.trim().toUpperCase();
       const { data: couple, error: e1 } = await supabase.from("couples").select("*").eq("id", id).single();
       if (e1 || !couple) { setError("Couple ID not found. Check with your partner."); setLoading(false); return; }
-      if (couple.linked) { setError("This couple is already linked."); setLoading(false); return; }
+
+      // If couple is already full, check if a user with this name+role already exists (rejoining)
+      let role = "b";
+      if (couple.linked) {
+        // Try to find existing user b in this couple
+        const { data: existingB } = await supabase.from("users").select("*").eq("couple_id", id).eq("role", "b").single();
+        if (existingB) {
+          // Restore session for existing user b
+          localStorage.setItem("swap_user_id", existingB.id);
+          localStorage.setItem("swap_couple_id", id);
+          localStorage.setItem("swap_role", "b");
+          onDone();
+          setLoading(false);
+          return;
+        }
+        setError("This couple is already full."); setLoading(false); return;
+      }
 
       const { error: e2 } = await supabase.from("couples").update({
         user_b_name: name.trim(), user_b_avatar: avatar, linked: true,
@@ -236,13 +252,13 @@ function Onboarding({ onDone }) {
       if (e2) throw e2;
 
       const { data: user, error: e3 } = await supabase.from("users").insert({
-        name: name.trim(), avatar, couple_id: id, role: "b", xp: 0, level: 1,
+        name: name.trim(), avatar, couple_id: id, role, xp: 0, level: 1,
       }).select().single();
       if (e3) throw e3;
 
       localStorage.setItem("swap_user_id", user.id);
       localStorage.setItem("swap_couple_id", id);
-      localStorage.setItem("swap_role", "b");
+      localStorage.setItem("swap_role", role);
       onDone();
     } catch (e) {
       setError("Something went wrong. Please try again.");
@@ -436,7 +452,7 @@ function Home({ user, partner, couple, swaps, setScreen }) {
           <div style={{ fontFamily: fontDisp, fontSize: 14, fontWeight: 800, color: theme.text, marginBottom: 10 }}>
             ⚡ Needs your response
           </div>
-          {pending.map(s => <SwapRow key={s.id} swap={s} user={user} partner={partner} />)}
+          {pending.map(s => <SwapRow key={s.id} swap={s} user={user} partner={partner} onRefresh={() => loadSwaps(couple.id)} />)}
         </>
       )}
 
