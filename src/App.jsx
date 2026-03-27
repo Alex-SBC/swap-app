@@ -394,7 +394,7 @@ function Onboarding({ onDone }) {
 }
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
-function Home({ user, partner, couple, swaps, setScreen }) {
+function Home({ user, partner, couple, swaps, setScreen, onRefresh }) {
   const { level, nextLevelXp, currentXp } = xpForLevel(user?.xp || 0);
   const active = swaps.filter(s => s.status === "active");
   const pending = swaps.filter(s => s.status === "pending" && s.created_by !== user?.role);
@@ -410,9 +410,9 @@ function Home({ user, partner, couple, swaps, setScreen }) {
             {user?.avatar} {user?.name} <span style={{ color: theme.textDim }}>×</span> {partner?.avatar || "?"} {partner?.name || "…"}
           </div>
         </div>
-        <Card style={{ padding: "8px 14px", textAlign: "center" }}>
+        <Card style={{ padding: "8px 14px", textAlign: "center", cursor: "pointer" }} onClick={onRefresh}>
           <div style={{ fontSize: 16, fontFamily: fontDisp, color: theme.purple, fontWeight: 800 }}>LVL {level}</div>
-          <div style={{ fontSize: 9, fontFamily: font, color: theme.textDim, letterSpacing: 0.5 }}>LEVEL</div>
+          <div style={{ fontSize: 9, fontFamily: font, color: theme.textDim, letterSpacing: 0.5 }}>TAP TO SYNC</div>
         </Card>
       </div>
 
@@ -595,9 +595,10 @@ function CreateSwap({ user, coupleId, onDone }) {
   async function handleSend() {
     if (!wantCat || !wantTitle || !offerCat || !offerTitle) return;
     setLoading(true);
-    await supabase.from("swaps").insert({
+    const role = user.role || localStorage.getItem("swap_role");
+    const { error } = await supabase.from("swaps").insert({
       couple_id: coupleId,
-      created_by: user.role,
+      created_by: role,
       want_cat: wantCat,
       want_title: wantTitle.trim(),
       offer_cat: offerCat,
@@ -605,6 +606,11 @@ function CreateSwap({ user, coupleId, onDone }) {
       deadline: deadline.trim() || null,
       status: "pending",
     });
+    if (error) {
+      alert("Failed to send swap: " + error.message);
+      setLoading(false);
+      return;
+    }
     await supabase.from("users").update({ xp: (user.xp || 0) + XP_ACTIONS.created }).eq("id", user.id);
     setLoading(false);
     setSent(true);
@@ -1034,7 +1040,7 @@ export default function App() {
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
 
       <div style={{ position: "relative", zIndex: 1 }}>
-        {screen === "home"    && <Home user={user} partner={partner} couple={couple} swaps={swaps} setScreen={setScreen} />}
+        {screen === "home"    && <Home user={user} partner={partner} couple={couple} swaps={swaps} setScreen={setScreen} onRefresh={() => loadSwaps(couple.id)} />}
         {screen === "swaps"   && <SwapsList swaps={swaps} user={user} partner={partner} onRefresh={() => loadSwaps(couple.id)} />}
         {screen === "create"  && <CreateSwap user={user} coupleId={couple.id} onDone={() => { loadSwaps(couple.id); setScreen("home"); }} />}
         {screen === "battle"  && <Battle user={user} />}
